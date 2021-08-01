@@ -2,6 +2,8 @@
 ## Init functions for JumpDrive
 ## Copyright (C) 2020 - postmarketOS
 ## Copyright (C) 2020 - Danctl12 <danct12@disroot.org>
+## Copyright (C) 2021 - Project DragonPi
+##
 
 setup_usb_configfs() {
 	# See: https://www.kernel.org/doc/Documentation/usb/gadget_configfs.txt
@@ -14,9 +16,11 @@ setup_usb_configfs() {
 	# Default values for USB-related deviceinfo variables
 	usb_idVendor="0x1209" # Generic
 	usb_idProduct="0x4201" # Random ID
-	usb_serialnumber="Jumpdrive"
+	usb_serialnumber="DragonKexec"
 	usb_rndis_function="rndis.usb0"
-	usb_mass_storage_function="mass_storage.0"
+
+	# mount as mass storage is wip so we disable it...
+	#usb_mass_storage_function="mass_storage.0"
 
 	echo "Setting up an USB gadget through configfs..."
 	# Create an usb gadet configuration
@@ -36,10 +40,10 @@ setup_usb_configfs() {
 	# Create rndis/mass_storage function
 	mkdir $CONFIGFS/g1/functions/"$usb_rndis_function" \
 		|| echo "  Couldn't create $CONFIGFS/g1/functions/$usb_rndis_function"
-	mkdir $CONFIGFS/g1/functions/"$usb_mass_storage_function" \
-		|| echo "  Couldn't create $CONFIGFS/g1/functions/$usb_mass_storage_function"
-	mkdir $CONFIGFS/g1/functions/"$usb_mass_storage_function/lun.1" \
-		|| echo "  Couldn't create $CONFIGFS/g1/functions/$usb_mass_storage_function/lun.1"
+	#mkdir $CONFIGFS/g1/functions/"$usb_mass_storage_function" \
+	#	|| echo "  Couldn't create $CONFIGFS/g1/functions/$usb_mass_storage_function"
+	#mkdir $CONFIGFS/g1/functions/"$usb_mass_storage_function/lun.1" \
+	#	|| echo "  Couldn't create $CONFIGFS/g1/functions/$usb_mass_storage_function/lun.1"
 
 	# Create configuration instance for the gadget
 	mkdir $CONFIGFS/g1/configs/c.1 \
@@ -50,23 +54,23 @@ setup_usb_configfs() {
 		|| echo "  Couldn't write configration name"
 
 	# Make sure the node for the eMMC exists
-	if [ -z "$(ls $EMMC)" ]; then
-		fatal_error "$EMMC could not be opened, possible eMMC defect"
-	fi
+	#if [ -z "$(ls $EMMC)" ]; then
+	#	fatal_error "$EMMC could not be opened, possible eMMC defect"
+	#fi
 
 	# Set up mass storage to internal EMMC
-	echo $EMMC > $CONFIGFS/g1/functions/"$usb_mass_storage_function"/lun.0/file
-	echo $SD > $CONFIGFS/g1/functions/"$usb_mass_storage_function"/lun.1/file
+	#echo $EMMC > $CONFIGFS/g1/functions/"$usb_mass_storage_function"/lun.0/file
+	#echo $SD > $CONFIGFS/g1/functions/"$usb_mass_storage_function"/lun.1/file
 
 	# Rename the mass storage device
-	echo "JumpDrive eMMC" > $CONFIGFS/g1/functions/"$usb_mass_storage_function"/lun.0/inquiry_string
-	echo "JumpDrive microSD" > $CONFIGFS/g1/functions/"$usb_mass_storage_function"/lun.1/inquiry_string
+	#echo "JumpDrive eMMC" > $CONFIGFS/g1/functions/"$usb_mass_storage_function"/lun.0/inquiry_string
+	#echo "JumpDrive microSD" > $CONFIGFS/g1/functions/"$usb_mass_storage_function"/lun.1/inquiry_string
 
 	# Link the rndis/mass_storage instance to the configuration
 	ln -s $CONFIGFS/g1/functions/"$usb_rndis_function" $CONFIGFS/g1/configs/c.1 \
 		|| echo "  Couldn't symlink $usb_rndis_function"
-	ln -s $CONFIGFS/g1/functions/"$usb_mass_storage_function" $CONFIGFS/g1/configs/c.1 \
-		|| echo "  Couldn't symlink $usb_mass_storage_function"
+	#ln -s $CONFIGFS/g1/functions/"$usb_mass_storage_function" $CONFIGFS/g1/configs/c.1 \
+	#	|| echo "  Couldn't symlink $usb_mass_storage_function"
 
 	# Check if there's an USB Device Controller
 	if [ -z "$(ls /sys/class/udc)" ]; then
@@ -81,7 +85,7 @@ setup_telnetd() {
 	echo "Starting telnet daemon..."
 	{
 		echo "#!/bin/sh"
-		echo "echo \"Welcome to Jumpdrive Shell!\""
+		echo "echo \"Welcome to DragonKexec Shell!\""
 		echo "sh"
 	} >/telnet_connect.sh
 	chmod +x /telnet_connect.sh
@@ -142,9 +146,6 @@ fatal_error() {
 
 	# Move cursor into position for error message
 	echo -e "\033[$ERRORLINES;0H"
-
-	gzip -c -d error.ppm.gz > /error.ppm
-	fbsplash -s /error.ppm
 	
 	# Print the error message over the error splash
 	echo "  $1"

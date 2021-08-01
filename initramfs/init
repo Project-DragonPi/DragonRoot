@@ -1,14 +1,16 @@
 #!/bin/sh
 
 ## SPDX-License-Identifier: GPL-2.0-only
-## Init script for JumpDrive
+## Init script for DragonKexec
 ## Copyright (C) 2020 - postmarketOS
 ## Copyright (C) 2020 - Danctl12 <danct12@disroot.org>
+## Copyright (C) 2021 - Project DragonPi 
 
-echo "Welcome to JumpDrive"
+echo "[^_^] Welcome to DragonKexec"
+echo "This Bootloader Has Handsome Power!"
 
 . /info.sh
-echo "Running on $PLATFORM"
+echo "[INFO] Now We Running on $PLATFORM"
 
 . /init_functions.sh
 
@@ -56,8 +58,5 @@ start_serial_getty
 setup_usb_configfs
 start_udhcpd
 setup_telnetd
-
-gzip -c -d splash.ppm.gz > /splash.ppm
-fbsplash -s /splash.ppm
 
 loop_forever
