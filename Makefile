@@ -1,7 +1,7 @@
 CROSS_FLAGS = ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu-
 CROSS_FLAGS_BOOT = CROSS_COMPILE=aarch64-linux-gnu-
 
-all: boot-xiaomi-beryllium-tianma.img boot-xiaomi-beryllium-ebbg.img boot-oneplus-enchilada.img boot-oneplus-fajita.img
+all: boot-xiaomi-beryllium-tianma.img boot-xiaomi-beryllium-ebbg.img boot-oneplus-enchilada.img boot-oneplus-fajita.img boot-xiaomi-wt88047.img boot-motorola-harpia.img
 
 kernel-xiaomi-beryllium-tianma.gz-dtb: kernel-sdm845.gz dtbs/sdm845/sdm845-xiaomi-beryllium-tianma.dtb
 	cat kernel-sdm845.gz dtbs/sdm845/sdm845-xiaomi-beryllium-tianma.dtb > $@
@@ -14,6 +14,12 @@ kernel-oneplus-enchilada.gz-dtb: kernel-sdm845.gz dtbs/sdm845/sdm845-oneplus-enc
 
 kernel-oneplus-fajita.gz-dtb: kernel-sdm845.gz dtbs/sdm845/sdm845-oneplus-fajita.dtb
 	cat kernel-sdm845.gz dtbs/sdm845/sdm845-oneplus-fajita.dtb > $@
+
+kernel-xiaomi-wt88047.gz-dtb: kernel-msm8916.gz dtbs/msm8916/msm8916-wingtech-wt88047.dtb
+	cat kernel-msm8916.gz dtbs/msm8916/msm8916-wingtech-wt88047.dtb > $@
+
+kernel-motorola-harpia.gz-dtb: kernel-msm8916.gz dtbs/msm8916/msm8916-motorola-harpia.dtb
+	cat kernel-msm8916.gz dtbs/msm8916/msm8916-motorola-harpia.dtb > $@
 
 boot-%.img: initramfs-%.gz kernel-%.gz-dtb
 	rm -f $@
@@ -75,9 +81,19 @@ kernel-sdm845.gz: src/linux-sdm845
 	@mkdir -p dtbs/sdm845
 	@$(MAKE) -C src/linux-sdm845 O=../../build/linux-sdm845 $(CROSS_FLAGS) defconfig sdm845.config
 	@printf "CONFIG_USB_ETH=n" >> build/linux-sdm845/.config
-	@$(MAKE) -C src/linux-sdm845 O=../../build/linux-sdm845 $(CROSS_FLAGS)
+	@$(MAKE) -C src/linux-sdm845 O=../../build/linux-sdm845 $(CROSS_FLAGS) -j16
 	@cp build/linux-sdm845/arch/arm64/boot/Image.gz $@
 	@cp build/linux-sdm845/arch/arm64/boot/dts/qcom/sdm845-{xiaomi-beryllium-*,oneplus-enchilada,oneplus-fajita}.dtb dtbs/sdm845/
+
+kernel-msm8916.gz: src/linux-msm8916
+	@echo "MAKE  $@"
+	@mkdir -p build/linux-msm8916
+	@mkdir -p dtbs/msm8916
+	@$(MAKE) -C src/linux-msm8916 O=../../build/linux-msm8916 $(CROSS_FLAGS) msm8916_defconfig
+	@$(MAKE) -C src/linux-msm8916 O=../../build/linux-msm8916 $(CROSS_FLAGS) -j16
+	@cp build/linux-msm8916/arch/arm64/boot/Image.gz $@
+	@cp build/linux-msm8916/arch/arm64/boot/dts/qcom/msm8916-*.dtb dtbs/msm8916/
+
 
 dtbs/sdm845/sdm845-xiaomi-beryllium-ebbg.dtb: kernel-sdm845.gz
 
@@ -87,11 +103,19 @@ dtbs/sdm845/sdm845-oneplus-enchilada.dtb: kernel-sdm845.gz
 
 dtbs/sdm845/sdm845-oneplus-fajita.dtb: kernel-sdm845.gz
 
+dtbs/msm8916/msm8916-wingtech-wt88047.dtb: kernel-msm8916.gz
+
+dtbs/msm8916/msm8916-motorola-harpia.dtb: kernel-msm8916.gz
+
 src/linux-sdm845:
 	@echo "WGET linux-sdm845"
 	@mkdir src/linux-sdm845
 	@wget -c https://gitlab.com/sdm845-mainline/linux/-/archive/b7a1e57f78d690d02aff902114bf2f6ca978ecfe/linux-b7a1e57f78d690d02aff902114bf2f6ca978ecfe.tar.gz
 	@tar -xf linux-b7a1e57f78d690d02aff902114bf2f6ca978ecfe.tar.gz --strip-components 1 -C src/linux-sdm845
+
+src/linux-msm8916:
+	@echo "Clone linux-msm8916"
+	@git clone https://github.com/Project-DragonPi/linux-msm.git --depth=1 src/linux-msm8916	
 
 src/busybox:
 	@echo "WGET  busybox"
@@ -110,6 +134,10 @@ src/kexec-tools:
 	@mkdir src/kexec-tools
 	@wget https://git.kernel.org/pub/scm/utils/kernel/kexec/kexec-tools.git/snapshot/kexec-tools-2.0.20.tar.gz
 	@tar -xvf kexec-tools-2.0.20.tar.gz --strip-components 1 -C src/kexec-tools
+
+src/kexecboot:
+	@echo "Clone kexecboot"
+	@git clone https://github.com/kexecboot/kexecboot.git --depth=1 src/kexecboot
 
 .PHONY: clean cleanfast
 
