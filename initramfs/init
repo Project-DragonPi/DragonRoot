@@ -6,6 +6,14 @@
 ## Copyright (C) 2020 - Danctl12 <danct12@disroot.org>
 ## Copyright (C) 2021 - Project DragonPi 
 
+echo "######                                     #    #                             " 
+echo "#     # #####    ##    ####   ####  #    # #   #  ###### #    # ######  ####  " 
+echo "#     # #    #  #  #  #    # #    # ##   # #  #   #       #  #  #      #    # " 
+echo "#     # #    # #    # #      #    # # #  # ###    #####    ##   #####  #      " 
+echo "#     # #####  ###### #  ### #    # #  # # #  #   #        ##   #      #      "
+echo "#     # #   #  #    # #    # #    # #   ## #   #  #       #  #  #      #    # "
+echo "######  #    # #    #  ####   ####  #    # #    # ###### #    # ######  ####  "
+
 echo "[^_^] Welcome to DragonKexec"
 echo "This Bootloader Has Handsome Power!"
 
@@ -27,6 +35,7 @@ echo "Installing Busybox..." && /bin/busybox --install -s
 mkdir /proc
 mkdir /sys
 mkdir /etc
+mkdir /mnt
 mount -t proc proc /proc
 mount -t sysfs sysfs /sys
 
@@ -52,6 +61,11 @@ echo "Creating device nodes..."
 mknod /dev/null c 1 3
 mknod /dev/tty c 5 0
 mdev -s
+
+# run kexecboot
+echo "[INFO] Now Start Kexecboot. "
+/sbin/kexec
+/bin/kexecboot
 
 # Finishing rescue setup
 start_serial_getty

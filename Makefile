@@ -29,7 +29,17 @@ boot-%.img: initramfs-%.gz kernel-%.gz-dtb
 	$(eval RAMDISK := $(shell cat src/deviceinfo_$* | grep ramdisk | cut -d "\"" -f 2))
 	$(eval TAGS := $(shell cat src/deviceinfo_$* | grep tags | cut -d "\"" -f 2))
 	$(eval PAGESIZE := $(shell cat src/deviceinfo_$* | grep pagesize | cut -d "\"" -f 2))
-	mkbootimg --kernel kernel-$*.gz-dtb --ramdisk initramfs-$*.gz --base $(BASE) --second_offset $(SECOND) --kernel_offset $(KERNEL) --ramdisk_offset $(RAMDISK) --tags_offset $(TAGS) --pagesize $(PAGESIZE) --cmdline console=ttyMSM0,115200 -o $@
+	mkbootimg --kernel kernel-$*.gz-dtb --ramdisk initramfs-$*.gz --base $(BASE) --second_offset $(SECOND) --kernel_offset $(KERNEL) --ramdisk_offset $(RAMDISK) --tags_offset $(TAGS) --pagesize $(PAGESIZE) --cmdline "console=ttyMSM0,115200 vt.global_cursor_default=0" -o $@
+
+boot-%.img-debug: kernel-%.gz-dtb initramfs-%.gz
+	rm -f $@
+	$(eval BASE := $(shell cat src/deviceinfo_$* | grep base | cut -d "\"" -f 2))
+	$(eval SECOND := $(shell cat src/deviceinfo_$* | grep second | cut -d "\"" -f 2))
+	$(eval KERNEL := $(shell cat src/deviceinfo_$* | grep kernel | cut -d "\"" -f 2))
+	$(eval RAMDISK := $(shell cat src/deviceinfo_$* | grep ramdisk | cut -d "\"" -f 2))
+	$(eval TAGS := $(shell cat src/deviceinfo_$* | grep tags | cut -d "\"" -f 2))
+	$(eval PAGESIZE := $(shell cat src/deviceinfo_$* | grep pagesize | cut -d "\"" -f 2))
+	mkbootimg --kernel kernel-$*.gz-dtb --ramdisk initramfs-$*.gz --base $(BASE) --second_offset $(SECOND) --kernel_offset $(KERNEL) --ramdisk_offset $(RAMDISK) --tags_offset $(TAGS) --pagesize $(PAGESIZE) -o $@.img
 
 %.img.xz: %.img
 	@echo "XZ    $@"
@@ -49,7 +59,6 @@ initramfs/bin/bash: src/bash
 	../../src/bash/configure --host=aarch64-linux-gnu --enable-static-link --without-bash-malloc
 	@$(MAKE) -C build/bash
 	@aarch64-linux-gnu-strip build/bash/bash
-	@upx --best build/bash/bash
 	@cp build/bash/bash initramfs/bin/bash
 
 initramfs/bin/kexec: src/kexec-tools
@@ -57,13 +66,31 @@ initramfs/bin/kexec: src/kexec-tools
 	@mkdir -p build/kexec-tools
 	@cd src/kexec-tools;./bootstrap
 	@cd build/kexec-tools;\
-	LDFLAGS=-static ../../src/kexec-tools/configure --host=aarch64-linux-gnu
-	@$(MAKE) -C build/kexec-tools
+	LDFLAGS=-static ../../src/kexec-tools/configure --host=aarch64-linux-gnu --with-objdir=build/kexec-tools
+	@LDFLAGS=-static $(MAKE) -C build/kexec-tools
 	@aarch64-linux-gnu-strip build/kexec-tools/build/sbin/kexec
-	@upx --best build/kexec-tools/build/sbin/kexec
 	@cp build/kexec-tools/build/sbin/kexec initramfs/bin/kexec
+
+initramfs/bin/kexecboot: src/kexecboot
+	@echo "MAKE  $@"
+	@mkdir -p build/kexecboot
+	@cd src/kexecboot;
+	@cp -rf src/kexecboot build/
+	@cd build/kexecboot;\
+	LDFLAGS=-static sh autogen.sh --host=aarch64-linux-gnu ;\
+	LDFLAGS=-static ./configure \
+	--enable-static-linking \
+	--enable-fbui=yes \
+	--enable-fbui-update \
+	--enable-numkeys \
+	--enable-debug \
+	--with-kexec-binary="/bin/kexec" \
+	--host=aarch64-linux-gnu
+	@LDFLAGS=-static $(MAKE) -C build/kexecboot
+	@aarch64-linux-gnu-strip build/kexecboot/src/kexecboot
+	@cp build/kexecboot/src/kexecboot initramfs/bin/kexecboot
 	
-initramfs-%.cpio: initramfs/bin/kexec initramfs/bin/bash initramfs/bin/busybox initramfs/init initramfs/init_functions.sh
+initramfs-%.cpio: initramfs/bin/kexecboot initramfs/bin/kexec initramfs/bin/bash initramfs/bin/busybox initramfs/init initramfs/init_functions.sh
 	@echo "CPIO  $@"
 	@rm -rf initramfs-$*
 	@cp -r initramfs initramfs-$*
@@ -93,7 +120,6 @@ kernel-msm8916.gz: src/linux-msm8916
 	@$(MAKE) -C src/linux-msm8916 O=../../build/linux-msm8916 $(CROSS_FLAGS) -j16
 	@cp build/linux-msm8916/arch/arm64/boot/Image.gz $@
 	@cp build/linux-msm8916/arch/arm64/boot/dts/qcom/msm8916-*.dtb dtbs/msm8916/
-
 
 dtbs/sdm845/sdm845-xiaomi-beryllium-ebbg.dtb: kernel-sdm845.gz
 
@@ -132,8 +158,8 @@ src/bash:
 src/kexec-tools:
 	@echo "WGET  kexec-tools"
 	@mkdir src/kexec-tools
-	@wget https://git.kernel.org/pub/scm/utils/kernel/kexec/kexec-tools.git/snapshot/kexec-tools-2.0.20.tar.gz
-	@tar -xvf kexec-tools-2.0.20.tar.gz --strip-components 1 -C src/kexec-tools
+	@wget https://git.kernel.org/pub/scm/utils/kernel/kexec/kexec-tools.git/snapshot/kexec-tools-2.0.22.tar.gz
+	@tar -xvf kexec-tools-2.0.22.tar.gz --strip-components 1 -C src/kexec-tools
 
 src/kexecboot:
 	@echo "Clone kexecboot"
@@ -152,8 +178,21 @@ cleanfast:
 	@rm -vf *.cpio
 	@rm -vf *.gz
 	@rm -vf *.gz-dtb
+	@rm -rvf dtbs
+
+# useful when debuging devicetree
+cc:
+	@rm -rvf initramfs-*/
+	@rm -vf *.img
+	@rm -vf *.gz
+	@rm -vf *.gz-dtb
+	@rm -rvf dtbs
 
 clean: cleanfast
 	@rm -vf kernel*.gz
 	@rm -vf initramfs/bin/busybox
+	@rm -vf initramfs/bin/bash
+	@rm -vf initramfs/bin/kexecboot
+	@rm -vf initramfs/sbin/kexec
+	@rm -vrf initramfs/lib
 	@rm -vrf dtbs

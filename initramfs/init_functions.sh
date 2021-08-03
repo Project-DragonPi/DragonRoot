@@ -37,13 +37,9 @@ setup_usb_configfs() {
 	# shellcheck disable=SC2154
 	echo "$PRODUCT"         > "$CONFIGFS/g1/strings/0x409/product"
 
-	# Create rndis/mass_storage function
+	# Create rndis function
 	mkdir $CONFIGFS/g1/functions/"$usb_rndis_function" \
 		|| echo "  Couldn't create $CONFIGFS/g1/functions/$usb_rndis_function"
-	#mkdir $CONFIGFS/g1/functions/"$usb_mass_storage_function" \
-	#	|| echo "  Couldn't create $CONFIGFS/g1/functions/$usb_mass_storage_function"
-	#mkdir $CONFIGFS/g1/functions/"$usb_mass_storage_function/lun.1" \
-	#	|| echo "  Couldn't create $CONFIGFS/g1/functions/$usb_mass_storage_function/lun.1"
 
 	# Create configuration instance for the gadget
 	mkdir $CONFIGFS/g1/configs/c.1 \
@@ -53,24 +49,10 @@ setup_usb_configfs() {
 	echo "rndis" > $CONFIGFS/g1/configs/c.1/strings/0x409/configuration \
 		|| echo "  Couldn't write configration name"
 
-	# Make sure the node for the eMMC exists
-	#if [ -z "$(ls $EMMC)" ]; then
-	#	fatal_error "$EMMC could not be opened, possible eMMC defect"
-	#fi
-
-	# Set up mass storage to internal EMMC
-	#echo $EMMC > $CONFIGFS/g1/functions/"$usb_mass_storage_function"/lun.0/file
-	#echo $SD > $CONFIGFS/g1/functions/"$usb_mass_storage_function"/lun.1/file
-
-	# Rename the mass storage device
-	#echo "JumpDrive eMMC" > $CONFIGFS/g1/functions/"$usb_mass_storage_function"/lun.0/inquiry_string
-	#echo "JumpDrive microSD" > $CONFIGFS/g1/functions/"$usb_mass_storage_function"/lun.1/inquiry_string
 
 	# Link the rndis/mass_storage instance to the configuration
 	ln -s $CONFIGFS/g1/functions/"$usb_rndis_function" $CONFIGFS/g1/configs/c.1 \
 		|| echo "  Couldn't symlink $usb_rndis_function"
-	#ln -s $CONFIGFS/g1/functions/"$usb_mass_storage_function" $CONFIGFS/g1/configs/c.1 \
-	#	|| echo "  Couldn't symlink $usb_mass_storage_function"
 
 	# Check if there's an USB Device Controller
 	if [ -z "$(ls /sys/class/udc)" ]; then
