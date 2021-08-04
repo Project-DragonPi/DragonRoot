@@ -163,7 +163,7 @@ src/kexec-tools:
 
 src/kexecboot:
 	@echo "Clone kexecboot"
-	@git clone https://github.com/kexecboot/kexecboot.git --depth=1 src/kexecboot
+	@git clone https://github.com/handsomeyingyan/kexecboot.git --depth=1 src/kexecboot
 
 .PHONY: clean cleanfast
 
