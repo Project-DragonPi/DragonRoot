@@ -141,7 +141,7 @@ src/linux-sdm845:
 
 src/linux-msm8916:
 	@echo "Clone linux-msm8916"
-	@git clone https://github.com/Project-DragonPi/linux-msm.git --depth=1 src/linux-msm8916	
+	@git clone https://github.com/Project-DragonPi/linux-msm-5.10.git --depth=1 src/linux-msm8916	
 
 src/busybox:
 	@echo "WGET  busybox"
